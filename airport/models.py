@@ -75,4 +75,15 @@ class Ticket(models.Model):
 
 class Order(models.Model):
     created = models.DateTimeField(auto_now_add=True)
-    user = models.CharField(max_length=100)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="orders"
+    )
+
+    @property
+    def name(self):
+        return f"{self.user}: {self.created.isoformat()}"
+
+    def __str__(self):
+        return f"{self.user.username} ({self.created})"
