@@ -1,4 +1,7 @@
+from django.conf import settings
 from django.db import models
+from django.db.models import UniqueConstraint
+from rest_framework.exceptions import ValidationError
 
 
 class Airport(models.Model):
@@ -106,6 +109,47 @@ class Ticket(models.Model):
         on_delete=models.CASCADE,
         related_name="tickets"
     )
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=["row", "seat", "flight"],
+                name="unique_ticket"
+            )
+        ]
+
+    @staticmethod
+    def validate_ticket(row, seat, airplane, error_to_raise):
+        for ticket_attr_value, ticket_attr_name, airplane_attr_name in [
+            (row, "row", "rows"),
+            (seat, "seat", "seats_in_row"),
+        ]:
+            count_attrs = getattr(airplane, airplane_attr_name)
+            if not (1 <= ticket_attr_value <= count_attrs):
+                raise error_to_raise(
+                    {
+                        ticket_attr_name: f"{ticket_attr_name} "
+                                          f"number must be in available range: "
+                                          f"(1, {airplane_attr_name}): "
+                                          f"(1, {count_attrs})"
+                    }
+                )
+
+    def clean(self):
+        Ticket.validate_ticket(
+            self.row,
+            self.seat,
+            self.flight.airplane,
+            ValidationError,
+        )
+
+    @property
+    def name(self):
+        return f"{self.flight}: {self.order} (row:{self.row} seats:{self.seat})"
+
+    def __str__(self):
+        return f"{self.flight}: {self.order} (row:{self.row} seats:{self.seat})"
+
 
 class Order(models.Model):
     created = models.DateTimeField(auto_now_add=True)
