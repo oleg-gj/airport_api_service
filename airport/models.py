@@ -5,6 +5,9 @@ class Airport(models.Model):
     name = models.CharField(max_length=100, unique=True)
     closest_big_city = models.CharField(max_length=100)
 
+    def __str__(self):
+        return self.name
+
 
 class Route(models.Model):
     source = models.ForeignKey(
@@ -57,6 +60,9 @@ class Airplane(models.Model):
 
 class AirplaneType(models.Model):
     name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.name
 
 
 class Ticket(models.Model):
