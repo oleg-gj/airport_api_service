@@ -78,6 +78,13 @@ class Airplane(models.Model):
         related_name="airplane_types"
     )
 
+    @property
+    def capacity(self) -> int:
+        return self.rows * self.seats_in_row
+
+    def __str__(self):
+        return self.name
+
 
 class AirplaneType(models.Model):
     name = models.CharField(max_length=100)
