@@ -8,6 +8,10 @@ class Airport(models.Model):
     name = models.CharField(max_length=100, unique=True)
     closest_big_city = models.CharField(max_length=100)
 
+    @property
+    def full_name(self):
+        return f"{self.name} ({self.closest_big_city})"
+
     def __str__(self):
         return self.name
 
@@ -142,6 +146,10 @@ class Ticket(models.Model):
             self.flight.airplane,
             ValidationError,
         )
+
+    @property
+    def taken_places(self):
+        return f"row:{self.row} seat:{self.seat}"
 
     @property
     def name(self):
