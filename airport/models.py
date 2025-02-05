@@ -13,7 +13,7 @@ class Airport(models.Model):
         return f"{self.name} ({self.closest_big_city})"
 
     def __str__(self):
-        return self.name
+        return f"{self.name} ({self.closest_big_city})"
 
 
 class Route(models.Model):
@@ -31,10 +31,10 @@ class Route(models.Model):
 
     @property
     def name(self):
-        return f"{self.source.name} -> {self.destination.name}"
+        return f"{self.source} -> {self.destination}"
 
     def __str__(self):
-        return f"{self.source.name} -> {self.destination.name}"
+        return f"{self.source} -> {self.destination}"
 
 
 class Flight(models.Model):
@@ -76,7 +76,7 @@ class Crew(models.Model):
 
 
 class Airplane(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
     rows = models.IntegerField()
     seats_in_row = models.IntegerField()
     airplane_type = models.ForeignKey(
@@ -94,7 +94,7 @@ class Airplane(models.Model):
 
 
 class AirplaneType(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
         return self.name
@@ -111,7 +111,9 @@ class Ticket(models.Model):
     order = models.ForeignKey(
         "Order",
         on_delete=models.CASCADE,
-        related_name="tickets"
+        related_name="tickets",
+        blank=True,
+        null=True
     )
 
     class Meta:
@@ -133,8 +135,8 @@ class Ticket(models.Model):
                 raise error_to_raise(
                     {
                         ticket_attr_name: f"{ticket_attr_name} "
-                                          f"number must be in available range: "
-                                          f"(1, {airplane_attr_name}): "
+                                          f"number must be in available range:"
+                                          f" (1, {airplane_attr_name}): "
                                           f"(1, {count_attrs})"
                     }
                 )
@@ -153,10 +155,14 @@ class Ticket(models.Model):
 
     @property
     def name(self):
-        return f"{self.flight}: {self.order} (row:{self.row} seats:{self.seat})"
+        return (
+            f"{self.flight}: {self.order} (row:{self.row} seats:{self.seat})"
+        )
 
     def __str__(self):
-        return f"{self.flight}: {self.order} (row:{self.row} seats:{self.seat})"
+        return (
+            f"{self.flight}: {self.order} (row:{self.row} seats:{self.seat})"
+        )
 
 
 class Order(models.Model):
