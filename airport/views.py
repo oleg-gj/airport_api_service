@@ -1,7 +1,10 @@
 from datetime import datetime
 from django.db.models import F, Count
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 
 from rest_framework import mixins
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import GenericViewSet
 
 from airport.models import (
@@ -12,7 +15,7 @@ from airport.models import (
     Airplane,
     AirplaneType,
     Ticket,
-    Order
+    Order,
 )
 from airport.serializers import (
     AirportSerializer,
@@ -28,7 +31,7 @@ from airport.serializers import (
     TicketListSerializer,
     OrderListSerializer,
     FlightListSerializer,
-    FlightDetailSerializer
+    FlightDetailSerializer,
 )
 
 
@@ -73,26 +76,18 @@ class FlightViewSet(
 
         if self.action in ("retrieve", "list"):
             queryset = (
-                queryset
-                .select_related("airplane")
-                .annotate(
-                    tickets_available=
-                    F("airplane__rows") *
-                    F("airplane__seats_in_row") -
-                    Count("tickets")
+                queryset.select_related("airplane").annotate(
+                    tickets_available=F("airplane__rows") * F("airplane__seats_in_row")
+                    - Count("tickets")
                 )
             ).order_by("id")
 
         if departure_date:
-            departure_date = (
-                datetime.strptime(departure_date, "%Y-%m-%d").date()
-            )
+            departure_date = datetime.strptime(departure_date, "%Y-%m-%d").date()
             queryset = queryset.filter(departure_time__date=departure_date)
 
         if arrival_date:
-            arrival_date = (
-                datetime.strptime(arrival_date, "%Y-%m-%d").date()
-            )
+            arrival_date = datetime.strptime(arrival_date, "%Y-%m-%d").date()
             queryset = queryset.filter(arrival_time__date=arrival_date)
 
         if source_city:
@@ -114,6 +109,32 @@ class FlightViewSet(
             return FlightDetailSerializer
         return self.serializer_class
 
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "departure_date",
+                type=OpenApiTypes.DATE,
+                description="Filter by departure date (ex. ?departure_date=2019-01-10)",
+            ),
+            OpenApiParameter(
+                "arrival_date",
+                type=OpenApiTypes.DATE,
+                description="Filter by arrival date (ex. ?arrival_date=2019-01-10)",
+            ),
+            OpenApiParameter(
+                "source_city",
+                type=OpenApiTypes.STR,
+                description="Filter by source city (ex. ?source_city=Kyiv)",
+            ),
+            OpenApiParameter(
+                "destination_city",
+                type=OpenApiTypes.STR,
+                description="Filter by destination city (ex. ?destination_city=Kyiv)",
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 class CrewViewSet(
     mixins.CreateModelMixin,
@@ -175,7 +196,9 @@ class TicketViewSet(
             )
 
         if destination_city:
-            queryset = queryset.filter(flight__route__destination__closest_big_city__icontains=destination_city)
+            queryset = queryset.filter(
+                flight__route__destination__closest_big_city__icontains=destination_city
+            )
 
         return queryset.distinct()
 
@@ -183,6 +206,28 @@ class TicketViewSet(
         if self.action in ("list", "retrieve"):
             return TicketListSerializer
         return self.serializer_class
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "airplane",
+                type={"type": "list", "items": {"type": "number"}},
+                description="Filter by airplane ID (ex. ?airplane=2,3)",
+            ),
+            OpenApiParameter(
+                "source_city",
+                type=str,
+                description="Filter by source city (ex. ?source_city=Kyiv)",
+            ),
+            OpenApiParameter(
+                "destination_city",
+                type=str,
+                description="Filter by destination city (ex. ?destination_city=Kyiv)",
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
 
 class OrderViewSet(
@@ -194,6 +239,7 @@ class OrderViewSet(
 ):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
+    permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user)
