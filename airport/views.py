@@ -178,6 +178,7 @@ class TicketViewSet(
 ):
     queryset = Ticket.objects.all()
     serializer_class = TicketSerializer
+    permission_classes = (IsAuthenticated,)
 
     def get_queryset(self):
         airplane = self.request.query_params.get("airplane")
