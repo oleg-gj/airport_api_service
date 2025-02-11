@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.db import models
 from django.db.models import UniqueConstraint
+
 from rest_framework.exceptions import ValidationError
 
 
@@ -67,7 +68,9 @@ class Airplane(models.Model):
     rows = models.IntegerField()
     seats_in_row = models.IntegerField()
     airplane_type = models.ForeignKey(
-        "AirplaneType", on_delete=models.CASCADE, related_name="airplane_types"
+        "AirplaneType",
+        on_delete=models.CASCADE,
+        related_name="airplane_types"
     )
 
     @property
@@ -88,9 +91,17 @@ class AirplaneType(models.Model):
 class Ticket(models.Model):
     row = models.IntegerField()
     seat = models.IntegerField()
-    flight = models.ForeignKey(Flight, on_delete=models.CASCADE, related_name="tickets")
+    flight = models.ForeignKey(
+        Flight,
+        on_delete=models.CASCADE,
+        related_name="tickets"
+    )
     order = models.ForeignKey(
-        "Order", on_delete=models.CASCADE, related_name="tickets", blank=True, null=True
+        "Order",
+        on_delete=models.CASCADE,
+        related_name="tickets",
+        blank=True,
+        null=True
     )
 
     class Meta:
@@ -146,4 +157,4 @@ class Order(models.Model):
         return f"{self.user}: {self.created.isoformat()}"
 
     def __str__(self):
-        return f"{self.user.username} ({self.created})"
+        return f"{self.user.email} ({self.created})"
