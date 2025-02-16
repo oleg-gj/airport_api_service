@@ -19,7 +19,7 @@ class Airport(models.Model):
 
 class Route(models.Model):
     source = models.ForeignKey(
-        Airport, on_delete=models.CASCADE, related_name="sours_routes"
+        Airport, on_delete=models.CASCADE, related_name="sources_routes"
     )
     destination = models.ForeignKey(
         Airport, on_delete=models.CASCADE, related_name="destination_route"
@@ -35,7 +35,11 @@ class Route(models.Model):
 
 
 class Flight(models.Model):
-    route = models.ForeignKey(Route, on_delete=models.CASCADE, related_name="flights")
+    route = models.ForeignKey(
+        Route,
+        on_delete=models.CASCADE,
+        related_name="flights"
+    )
     airplane = models.ForeignKey(
         "Airplane", on_delete=models.CASCADE, related_name="flights"
     )
@@ -106,7 +110,10 @@ class Ticket(models.Model):
 
     class Meta:
         constraints = [
-            UniqueConstraint(fields=["row", "seat", "flight"], name="unique_ticket")
+            UniqueConstraint(
+                fields=["row", "seat", "flight"],
+                name="unique_ticket"
+            )
         ]
 
     @staticmethod
@@ -140,16 +147,22 @@ class Ticket(models.Model):
 
     @property
     def name(self):
-        return f"{self.flight}: {self.order} (row:{self.row} seats:{self.seat})"
+        return (
+            f"{self.flight}: {self.order} (row:{self.row} seats:{self.seat})"
+        )
 
     def __str__(self):
-        return f"{self.flight}: {self.order} (row:{self.row} seats:{self.seat})"
+        return (
+            f"{self.flight}: {self.order} (row:{self.row} seats:{self.seat})"
+        )
 
 
 class Order(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="orders"
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="orders"
     )
 
     @property
