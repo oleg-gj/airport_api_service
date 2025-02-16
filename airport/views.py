@@ -1,4 +1,5 @@
 from datetime import datetime
+
 from django.db.models import F, Count
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -49,7 +50,7 @@ class RouteViewSet(
     mixins.ListModelMixin,
     GenericViewSet,
 ):
-    queryset = Route.objects.all()
+    queryset = Route.objects.select_related("source", "destination").all()
     serializer_class = RouteSerializer
 
     def get_serializer_class(self):
@@ -64,7 +65,11 @@ class FlightViewSet(
     mixins.RetrieveModelMixin,
     GenericViewSet,
 ):
-    queryset = Flight.objects.all()
+    queryset = (
+        Flight.objects
+        .select_related("route__destination", "route__source")
+        .prefetch_related("crews").all()
+    )
     serializer_class = FlightSerializer
 
     def get_queryset(self):
@@ -77,17 +82,22 @@ class FlightViewSet(
         if self.action in ("retrieve", "list"):
             queryset = (
                 queryset.select_related("airplane").annotate(
-                    tickets_available=F("airplane__rows") * F("airplane__seats_in_row")
+                    tickets_available=F("airplane__rows")
+                    * F("airplane__seats_in_row")
                     - Count("tickets")
                 )
             ).order_by("id")
 
         if departure_date:
-            departure_date = datetime.strptime(departure_date, "%Y-%m-%d").date()
+            departure_date = (
+                datetime.strptime(departure_date, "%Y-%m-%d").date()
+            )
             queryset = queryset.filter(departure_time__date=departure_date)
 
         if arrival_date:
-            arrival_date = datetime.strptime(arrival_date, "%Y-%m-%d").date()
+            arrival_date = (
+                datetime.strptime(arrival_date, "%Y-%m-%d").date()
+            )
             queryset = queryset.filter(arrival_time__date=arrival_date)
 
         if source_city:
@@ -97,7 +107,7 @@ class FlightViewSet(
 
         if destination_city:
             queryset = queryset.filter(
-                route__destination__closest_big_city__icontains=destination_city
+                route__destination__closest_big_city__icontains=destination_city  # noqa: E501
             )
 
         return queryset.distinct()
@@ -114,12 +124,14 @@ class FlightViewSet(
             OpenApiParameter(
                 "departure_date",
                 type=OpenApiTypes.DATE,
-                description="Filter by departure date (ex. ?departure_date=2019-01-10)",
+                description="Filter by departure date "
+                            "(ex. ?departure_date=2019-01-10)",
             ),
             OpenApiParameter(
                 "arrival_date",
                 type=OpenApiTypes.DATE,
-                description="Filter by arrival date (ex. ?arrival_date=2019-01-10)",
+                description="Filter by arrival date "
+                            "(ex. ?arrival_date=2019-01-10)",
             ),
             OpenApiParameter(
                 "source_city",
@@ -129,12 +141,14 @@ class FlightViewSet(
             OpenApiParameter(
                 "destination_city",
                 type=OpenApiTypes.STR,
-                description="Filter by destination city (ex. ?destination_city=Kyiv)",
+                description="Filter by destination city "
+                            "(ex. ?destination_city=Kyiv)",
             )
         ]
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
+
 
 class CrewViewSet(
     mixins.CreateModelMixin,
@@ -151,7 +165,7 @@ class AirplaneViewSet(
     mixins.ListModelMixin,
     GenericViewSet,
 ):
-    queryset = Airplane.objects.all()
+    queryset = Airplane.objects.select_related("airplane_type").all()
     serializer_class = AirplaneSerializer
 
     def get_serializer_class(self):
@@ -176,7 +190,13 @@ class TicketViewSet(
     mixins.DestroyModelMixin,
     GenericViewSet,
 ):
-    queryset = Ticket.objects.all()
+    queryset = Ticket.objects.select_related(
+        "flight__route__source",
+        "flight__route__destination",
+        "flight__airplane",
+        "order__user",
+    )
+
     serializer_class = TicketSerializer
     permission_classes = (IsAuthenticated,)
 
@@ -198,7 +218,9 @@ class TicketViewSet(
 
         if destination_city:
             queryset = queryset.filter(
-                flight__route__destination__closest_big_city__icontains=destination_city
+                flight__route__destination__closest_big_city__icontains=(
+                    destination_city
+                )
             )
 
         return queryset.distinct()
@@ -223,7 +245,8 @@ class TicketViewSet(
             OpenApiParameter(
                 "destination_city",
                 type=str,
-                description="Filter by destination city (ex. ?destination_city=Kyiv)",
+                description="Filter by destination city "
+                            "(ex. ?destination_city=Kyiv)",
             ),
         ]
     )
@@ -238,7 +261,11 @@ class OrderViewSet(
     mixins.DestroyModelMixin,
     GenericViewSet,
 ):
-    queryset = Order.objects.all()
+    queryset = Order.objects.all().select_related("user").prefetch_related(
+        "tickets__flight__route__source",
+        "tickets__flight__route__destination",
+        "tickets__flight__airplane",
+    )
     serializer_class = OrderSerializer
     permission_classes = (IsAuthenticated,)
 
