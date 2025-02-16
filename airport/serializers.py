@@ -1,4 +1,5 @@
 from django.db import transaction
+
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -32,8 +33,14 @@ class RouteSerializer(serializers.ModelSerializer):
 
 
 class RouteListSerializer(RouteSerializer):
-    source = serializers.SlugRelatedField(slug_field="full_name", read_only=True)
-    destination = serializers.SlugRelatedField(slug_field="full_name", read_only=True)
+    source = serializers.SlugRelatedField(
+        slug_field="full_name",
+        read_only=True
+    )
+    destination = serializers.SlugRelatedField(
+        slug_field="full_name",
+        read_only=True
+    )
 
 
 class CrewSerializer(serializers.ModelSerializer):
@@ -65,7 +72,11 @@ class FlightSerializer(serializers.ModelSerializer):
 class FlightListSerializer(FlightSerializer):
     route = serializers.SlugRelatedField(slug_field="name", read_only=True)
     airplane = serializers.SlugRelatedField(slug_field="name", read_only=True)
-    crews = serializers.SlugRelatedField(slug_field="name", read_only=True, many=True)
+    crews = serializers.SlugRelatedField(
+        slug_field="name",
+        read_only=True,
+        many=True
+    )
 
 
 class FlightDetailSerializer(FlightListSerializer):
@@ -90,11 +101,21 @@ class FlightDetailSerializer(FlightListSerializer):
 class AirplaneSerializer(serializers.ModelSerializer):
     class Meta:
         model = Airplane
-        fields = ("id", "name", "rows", "seats_in_row", "airplane_type", "capacity")
+        fields = (
+            "id",
+            "name",
+            "rows",
+            "seats_in_row",
+            "airplane_type",
+            "capacity"
+        )
 
 
 class AirplaneListSerializer(AirplaneSerializer):
-    airplane_type = serializers.SlugRelatedField(slug_field="name", read_only=True)
+    airplane_type = serializers.SlugRelatedField(
+        slug_field="name",
+        read_only=True
+    )
 
 
 class AirplaneTypeSerializer(serializers.ModelSerializer):
@@ -107,7 +128,10 @@ class TicketSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         data = super(TicketSerializer, self).validate(attrs=attrs)
         Ticket.validate_ticket(
-            attrs["row"], attrs["seat"], attrs["flight"].airplane, ValidationError
+            attrs["row"],
+            attrs["seat"],
+            attrs["flight"].airplane,
+            ValidationError
         )
         return data
 
